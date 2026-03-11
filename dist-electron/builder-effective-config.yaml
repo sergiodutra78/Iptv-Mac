@@ -1,0 +1,17 @@
+directories:
+  output: dist-electron
+  buildResources: build
+appId: com.kinetiq.iptv
+productName: KinetiQ IPTV
+npmRebuild: false
+win:
+  target: dir
+mac:
+  target: dmg
+  category: public.app-category.entertainment
+files:
+  - filter:
+      - dist/**/*
+      - electron/**/*
+      - package.json
+electronVersion: 30.5.1
