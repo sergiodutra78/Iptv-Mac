@@ -42,7 +42,7 @@ const MovieCard = ({ movie, onClick }: MovieCardProps) => {
             if (movie.type === 'series') {
                 data = await MetadataService.getSeriesMetadata(movie.name);
             } else if (movie.type === 'movie') {
-                data = await MetadataService.getMovieMetadata(movie.name);
+                data = await MetadataService.getMovieMetadata(movie.name, movie);
             }
 
             if (isMounted && data) {
@@ -62,19 +62,19 @@ const MovieCard = ({ movie, onClick }: MovieCardProps) => {
             onClick={() => onClick(movie)}
         >
             <div className="aspect-[2/3] bg-zinc-900 rounded-md overflow-hidden border border-zinc-800 transition-all group-hover:border-primary/50">
-                {movie.logo && isInView ? (
+                {(metadata?.posterUrl || movie.logo) && isInView ? (
                     <div className="absolute inset-0 flex items-center justify-center p-2">
                         {/* Difuminado de fondo para rellenar huecos si la imagen es pequeña o tiene otro aspect ratio */}
                         <div
                             className="absolute inset-0 opacity-20 blur-xl scale-110"
                             style={{
-                                backgroundImage: `url(${movie.logo})`,
+                                backgroundImage: `url(${metadata?.posterUrl || movie.logo})`,
                                 backgroundSize: 'cover',
                                 backgroundPosition: 'center'
                             }}
                         />
                         <CachedImage
-                            src={movie.logo}
+                            src={metadata?.posterUrl || movie.logo!}
                             alt={movie.name}
                             className="w-full h-full object-contain relative z-10 group-hover:scale-110 transition-transform duration-500"
                         />

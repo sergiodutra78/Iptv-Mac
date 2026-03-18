@@ -4,9 +4,11 @@ import { Save, CheckCircle } from 'lucide-react';
 
 const Settings = () => {
     const [baseUrl, setBaseUrl] = useState('');
+    const [playlistName, setPlaylistName] = useState('');
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [directUrl, setDirectUrl] = useState('');
+    const [epgUrl, setEpgUrl] = useState('');
     const [saved, setSaved] = useState(false);
 
     useEffect(() => {
@@ -15,6 +17,9 @@ const Settings = () => {
         if (storedConfig) {
             try {
                 const parsed = JSON.parse(storedConfig);
+                if (parsed.playlistName) {
+                    setPlaylistName(parsed.playlistName);
+                }
                 if (parsed.xtreamCodes) {
                     setBaseUrl(parsed.xtreamCodes.baseUrl || '');
                     setUsername(parsed.xtreamCodes.username || '');
@@ -22,6 +27,9 @@ const Settings = () => {
                 }
                 if (parsed.directM3uUrl !== undefined) {
                     setDirectUrl(parsed.directM3uUrl);
+                }
+                if (parsed.epgUrl !== undefined) {
+                    setEpgUrl(parsed.epgUrl);
                 }
             } catch (e) {
                 console.error("Error leyendo config", e);
@@ -32,17 +40,31 @@ const Settings = () => {
             setUsername(IPTV_CONFIG.xtreamCodes.username === "TU_USUARIO_AQUI" ? "" : IPTV_CONFIG.xtreamCodes.username);
             setPassword(IPTV_CONFIG.xtreamCodes.password === "TU_PASSWORD_AQUI" ? "" : IPTV_CONFIG.xtreamCodes.password);
             setDirectUrl(IPTV_CONFIG.directM3uUrl);
+            setEpgUrl(IPTV_CONFIG.epgUrl || '');
         }
     }, []);
 
     const handleSave = () => {
+        let finalName = playlistName.trim();
+        if (!finalName) {
+            if (directUrl) {
+                try { finalName = new URL(directUrl).hostname; } catch(e) { finalName = "Lista M3U"; }
+            } else if (baseUrl) {
+                try { finalName = new URL(baseUrl).hostname; } catch(e) { finalName = "Lista Xtream"; }
+            } else {
+                finalName = "Mi Lista";
+            }
+        }
+
         const newConfig = {
+            playlistName: finalName,
             xtreamCodes: {
                 baseUrl,
                 username,
                 password
             },
-            directM3uUrl: directUrl
+            directM3uUrl: directUrl,
+            epgUrl: epgUrl
         };
 
         localStorage.setItem('iptv_config', JSON.stringify(newConfig));
@@ -65,12 +87,12 @@ const Settings = () => {
 
                     <div className="space-y-4">
                         <div>
-                            <label className="block text-sm font-medium text-zinc-400 mb-1">URL del Servidor / Host</label>
+                            <label className="block text-sm font-medium text-zinc-400 mb-1">Nombre de la lista</label>
                             <input
                                 type="text"
-                                value={baseUrl}
-                                onChange={(e) => setBaseUrl(e.target.value)}
-                                placeholder="ej. http://servidor.tv:8080"
+                                value={playlistName}
+                                onChange={(e) => setPlaylistName(e.target.value)}
+                                placeholder="ej. Mi Lista Premium"
                                 className="w-full bg-black border border-zinc-800 rounded-lg px-4 py-2 focus:outline-none focus:border-primary transition-colors"
                             />
                         </div>
@@ -89,6 +111,16 @@ const Settings = () => {
                                 type="password"
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
+                                className="w-full bg-black border border-zinc-800 rounded-lg px-4 py-2 focus:outline-none focus:border-primary transition-colors"
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-zinc-400 mb-1">URL del Servidor / Host</label>
+                            <input
+                                type="text"
+                                value={baseUrl}
+                                onChange={(e) => setBaseUrl(e.target.value)}
+                                placeholder="ej. http://servidor.tv:8080"
                                 className="w-full bg-black border border-zinc-800 rounded-lg px-4 py-2 focus:outline-none focus:border-primary transition-colors"
                             />
                         </div>
@@ -111,6 +143,25 @@ const Settings = () => {
                                 className="w-full bg-black border border-zinc-800 rounded-lg px-4 py-2 focus:outline-none focus:border-primary transition-colors resize-none"
                             ></textarea>
                         </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* Guía de Programación Form */}
+            <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 mt-8">
+                <h2 className="text-xl font-bold mb-4 text-primary">Guía de Programación (EPG)</h2>
+                <p className="text-sm text-zinc-500 mb-4">Opcional. Úsalo si tu lista M3U no contiene el enlace EPG, o quieres forzar una fuente externa (XMLTV).</p>
+
+                <div className="space-y-4">
+                    <div>
+                        <label className="block text-sm font-medium text-zinc-400 mb-1">URL de EPG (XMLTV o GZ)</label>
+                        <input
+                            type="text"
+                            value={epgUrl}
+                            onChange={(e) => setEpgUrl(e.target.value)}
+                            placeholder="http://servidor.tv:8080/xmltv.php"
+                            className="w-full bg-black border border-zinc-800 rounded-lg px-4 py-2 focus:outline-none focus:border-primary transition-colors"
+                        />
                     </div>
                 </div>
             </div>

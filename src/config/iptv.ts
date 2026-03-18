@@ -7,15 +7,18 @@
 export const IPTV_CONFIG = {
     // Credenciales extraídas de la configuración de usuario (LatinChannel)
     xtreamCodes: {
-        baseUrl: import.meta.env.DEV ? "/api/xtream" : "http://latinchannel.tv:8080",
-        username: "sergiodutra309",
-        password: "143530925",
+        baseUrl: import.meta.env.DEV ? "/api/xtream" : "TU_HOST_AQUI",
+        username: "TU_USUARIO_AQUI",
+        password: "TU_PASSWORD_AQUI",
     },
 
     // --- O ALTERNATIVAMENTE ---
 
     // Si tienes directamente la URL completa del archivo .m3u o .m3u8, pégala aquí
     directM3uUrl: "",
+
+    // URL de la Guía de Programación (EPG / XMLTV)
+    epgUrl: "",
 
     // Opciones del reproductor
     autoDetectGroups: true, // Organiza automáticamente por categorías (Cine, Deportes, etc.)

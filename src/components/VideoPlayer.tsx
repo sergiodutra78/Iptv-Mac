@@ -5,6 +5,7 @@ import { Play, Pause, Volume2, VolumeX, Maximize, Minimize, SkipBack, SkipForwar
 interface VideoPlayerProps {
     url: string;
     title?: string;
+    subtitle?: string;
     type?: 'live' | 'movie' | 'series';
     onClose?: () => void;
     onNext?: () => void;
@@ -13,7 +14,7 @@ interface VideoPlayerProps {
     onToggleEPG?: () => void;
 }
 
-const VideoPlayer: React.FC<VideoPlayerProps> = ({ url, title, type = 'live', onClose, onNext, onPrev, onToggleChannelList, onToggleEPG }) => {
+const VideoPlayer: React.FC<VideoPlayerProps> = ({ url, title, subtitle, type = 'live', onClose, onNext, onPrev, onToggleChannelList, onToggleEPG }) => {
     const containerRef = useRef<HTMLDivElement>(null);
     const videoRef = useRef<HTMLVideoElement>(null);
     const [isPlaying, setIsPlaying] = useState(true);
@@ -23,6 +24,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ url, title, type = 'live', on
     const [isFullscreen, setIsFullscreen] = useState(false);
     const [currentTime, setCurrentTime] = useState(0);
     const [duration, setDuration] = useState(0);
+    const [hasError, setHasError] = useState(false);
     const controlsTimeout = useRef<any>(null);
 
     const isLive = type === 'live';
@@ -30,6 +32,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ url, title, type = 'live', on
     useEffect(() => {
         if (!videoRef.current) return;
 
+        setHasError(false); // Reset error on URL change
         // Limpiar src previo
         videoRef.current.src = '';
 
@@ -58,6 +61,13 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ url, title, type = 'live', on
                 if (videoRef.current) {
                     videoRef.current.volume = volume;
                     videoRef.current.muted = isMuted;
+                }
+            });
+
+            hls.on(Hls.Events.ERROR, (_, data) => {
+                if (data.fatal) {
+                    console.error("HLS Fatal Error", data);
+                    setHasError(true);
                 }
             });
 
@@ -192,7 +202,24 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ url, title, type = 'live', on
                 ref={videoRef}
                 className="w-full h-full cursor-pointer shadow-[0_0_100px_rgba(0,0,0,0.5)]"
                 onClick={togglePlay}
+                onError={() => setHasError(true)}
             />
+
+            {hasError && (
+                <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/80 backdrop-blur-md z-40 text-white gap-4 pointer-events-auto">
+                    {onClose && (
+                        <button
+                            onClick={onClose}
+                            className="absolute top-8 right-8 p-3 bg-white/5 hover:bg-white/15 backdrop-blur-md rounded-full transition-all border border-white/10 hover:border-white/20 z-50 text-white"
+                        >
+                            ✕
+                        </button>
+                    )}
+                    <VolumeX size={64} className="text-primary animate-pulse" />
+                    <h2 className="text-3xl font-black tracking-tighter uppercase italic">Canal Offline</h2>
+                    <p className="text-sm text-zinc-400 font-medium">El contenido no se encuentra disponible en este momento.</p>
+                </div>
+            )}
 
             {/* OCR Elements removed */}
 
@@ -203,9 +230,9 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ url, title, type = 'live', on
                         <h2 className="text-2xl font-black tracking-tighter text-white drop-shadow-lg leading-tight uppercase">
                             {title || (url.split('/').pop()?.split('?')[0].replace(/%20/g, ' ') || "Reproduciendo...")}
                         </h2>
-                        <p className="text-xs text-zinc-300 font-bold flex items-center gap-2 mt-0.5 drop-shadow-md">
+                        <p className="text-[10px] text-zinc-300 font-bold flex items-center gap-2 mt-0.5 drop-shadow-md max-w-full">
                             {isLive && <span className="bg-primary px-1.5 py-0.5 rounded text-[8px] text-white">LIVE</span>}
-                            <span>{isLive ? 'Canal en vivo' : 'Contenido VOD'}</span>
+                            <span className="truncate max-w-[280px]">{isLive ? (subtitle || 'Canal en vivo') : 'Contenido VOD'}</span>
                             {!title && <span className="text-[10px] text-zinc-500 opacity-50 truncate max-w-[200px] font-medium border-l border-white/10 pl-2 ml-1">{url.split('/').pop()?.split('?')[0]}</span>}
                         </p>
                     </div>

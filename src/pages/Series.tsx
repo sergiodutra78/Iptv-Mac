@@ -5,9 +5,62 @@ import { WatchedService } from '../services/WatchedService';
 import { getActivePlaylistUrl } from '../config/iptv';
 import MovieCard from '../components/MovieCard';
 import VideoPlayer from '../components/VideoPlayer';
-import { Search, PlayCircle, Loader2, LayoutGrid, List, ChevronLeft, CheckCircle2 } from 'lucide-react';
+import { Search, PlayCircle, Loader2, LayoutGrid, List, ChevronLeft, CheckCircle2, Star } from 'lucide-react';
+import { MetadataService, type MediaMetadata } from '../services/metadataService';
 
 const ITEMS_PER_PAGE = 40;
+
+const SeriesListItem = ({ item, onClick }: { item: GroupedSeries, onClick: () => void }) => {
+    const [metadata, setMetadata] = useState<MediaMetadata | null>(null);
+
+    useEffect(() => {
+        let isMounted = true;
+        MetadataService.getSeriesMetadata(item.name).then(data => {
+            if (isMounted) setMetadata(data);
+        });
+        return () => { isMounted = false; };
+    }, [item.name]);
+
+    return (
+        <div
+            onClick={onClick}
+            className="flex items-center gap-4 p-4 bg-zinc-900/40 hover:bg-zinc-800/80 border border-zinc-800/50 hover:border-primary/50 rounded-xl cursor-pointer transition-all group"
+        >
+            {(metadata?.posterUrl || item.logo) ? (
+                <div className="w-16 h-24 sm:w-20 sm:h-28 flex-shrink-0 bg-black rounded-lg overflow-hidden relative shadow-lg">
+                    <img src={metadata?.posterUrl || item.logo!} alt={item.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" onError={(e) => { (e.target as HTMLImageElement).src = 'https://via.placeholder.com/200x300?text=No+Image' }} />
+                    <div className="absolute inset-0 bg-black/20 group-hover:bg-transparent transition-colors"></div>
+                </div>
+            ) : (
+                <div className="w-16 h-24 sm:w-20 sm:h-28 flex-shrink-0 bg-zinc-800 rounded-lg flex items-center justify-center">
+                    <PlayCircle size={32} className="text-zinc-600" />
+                </div>
+            )}
+            <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-1">
+                    <h3 className="text-sm sm:text-base font-bold text-white group-hover:text-primary transition-colors truncate">{item.name}</h3>
+                    <span className="text-[10px] px-1.5 py-0.5 bg-zinc-800 text-zinc-500 rounded font-bold uppercase">{item.episodes.length} EP</span>
+                </div>
+                <p className="text-[11px] text-zinc-400 capitalize mb-1">{item.group}</p>
+                <div className="flex items-center gap-2">
+                    {metadata?.rating && (
+                        <div className="flex items-center gap-0.5 text-xs font-black text-yellow-500">
+                            <Star size={11} fill="currentColor" />
+                            <span>{metadata.rating.toFixed(1)}</span>
+                        </div>
+                    )}
+                    {metadata?.year && (
+                        <span className="text-[10px] font-black px-1.5 py-0.5 bg-zinc-800/80 text-zinc-400 rounded-md border border-zinc-700">{metadata.year}</span>
+                    )}
+                    <span className="text-[10px] font-bold px-1.5 py-0.5 bg-zinc-800/50 text-zinc-300 rounded uppercase tracking-wider">Series</span>
+                </div>
+            </div>
+            <div className="hidden sm:flex items-center justify-center w-10 h-10 bg-white/5 group-hover:bg-primary rounded-full transition-colors mr-2 flex-shrink-0">
+                <PlayCircle size={20} className="text-zinc-400 group-hover:text-white transition-colors" />
+            </div>
+        </div>
+    );
+};
 
 const Series = () => {
     const [series, setSeries] = useState<GroupedSeries[]>(() => DataService.getGroupedSeriesSync());
@@ -23,8 +76,17 @@ const Series = () => {
     const [visibleCount, setVisibleCount] = useState(ITEMS_PER_PAGE);
     const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
     const [, setUpdateTrigger] = useState(0); // To force re-render when watched status changes
+    const [metadata, setMetadata] = useState<MediaMetadata | null>(null);
 
     const loaderRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        if (!selectedSeries) {
+            setMetadata(null);
+            return;
+        }
+        MetadataService.getSeriesMetadata(selectedSeries.name).then(setMetadata);
+    }, [selectedSeries]);
 
     const filteredSeries = useMemo(() => {
         let result = series;
@@ -116,27 +178,56 @@ const Series = () => {
         return (
             <div className="flex flex-col h-[calc(100vh-5rem)] bg-zinc-950 overflow-hidden">
                 {/* Header Series Detail */}
-                <div className="relative h-64 sm:h-80 w-full overflow-hidden flex-shrink-0">
-                    <img src={selectedSeries.logo} alt={selectedSeries.name} className="absolute inset-0 w-full h-full object-cover blur-3xl opacity-30" />
-                    <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 to-transparent" />
+                <div className="relative h-72 sm:h-96 w-full overflow-hidden flex-shrink-0">
+                    <img src={metadata?.backdropUrl || selectedSeries.logo} alt={selectedSeries.name} className="absolute inset-0 w-full h-full object-cover blur-md opacity-40 scale-105" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-zinc-950/80 to-transparent" />
 
                     <div className="relative h-full flex items-end p-8 gap-8 max-w-7xl mx-auto w-full">
-                        <div className="flex-shrink-0 w-32 h-48 sm:w-40 sm:h-60 rounded-xl overflow-hidden shadow-2xl border border-zinc-800">
-                            <img src={selectedSeries.logo} alt={selectedSeries.name} className="w-full h-full object-cover" />
+                        <div className="hidden sm:block flex-shrink-0 w-44 h-64 rounded-2xl overflow-hidden shadow-2xl border border-zinc-800/50 relative group">
+                            <img src={metadata?.posterUrl || selectedSeries.logo} alt={selectedSeries.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
                         </div>
-                        <div className="flex-1 pb-4">
+                        <div className="flex-1 pb-4 flex flex-col justify-end">
                             <button
                                 onClick={() => setSelectedSeries(null)}
-                                className="flex items-center gap-2 text-zinc-400 hover:text-white mb-4 transition-colors group"
+                                className="flex items-center gap-2 text-zinc-400 hover:text-white mb-4 transition-colors group w-fit"
                             >
                                 <ChevronLeft size={20} className="group-hover:-translate-x-1 transition-transform" />
-                                <span className="text-sm font-bold uppercase tracking-wider">Volver a Series</span>
+                                <span className="text-sm font-bold uppercase tracking-wider">Volver</span>
                             </button>
-                            <h1 className="text-4xl sm:text-6xl font-black italic tracking-tighter mb-2 uppercase">{selectedSeries.name}</h1>
-                            <div className="flex items-center gap-3">
-                                <span className="px-3 py-1 bg-primary/20 text-primary text-xs font-bold rounded-full border border-primary/20 uppercase tracking-widest">{selectedSeries.group}</span>
-                                <span className="text-zinc-500 text-sm font-medium">{selectedSeries.episodes.length} Episodios</span>
+                            
+                            <h1 className="text-3xl sm:text-5xl font-black italic tracking-tighter mb-2 uppercase leading-none">{selectedSeries.name}</h1>
+                            
+                            {/* Metadata Row */}
+                            <div className="flex flex-wrap items-center gap-2 mb-3">
+                                {metadata?.rating && (
+                                    <div className="flex items-center gap-1 px-1.5 py-0.5 bg-yellow-500/10 text-yellow-500 text-xs font-black rounded border border-yellow-500/20">
+                                        <Star size={12} fill="currentColor" />
+                                        <span>{metadata.rating.toFixed(1)}</span>
+                                    </div>
+                                )}
+                                {metadata?.year && (
+                                    <span className="px-1.5 py-0.5 bg-zinc-900 text-zinc-300 text-xs font-bold rounded border border-zinc-800">{metadata.year}</span>
+                                )}
+                                <span className="px-1.5 py-0.5 bg-primary/20 text-primary text-xs font-bold rounded border border-primary/20 uppercase tracking-widest">{selectedSeries.group}</span>
+                                {metadata?.status && (
+                                    <span className="text-zinc-400 text-xs font-black uppercase border border-zinc-800 rounded px-1.5 py-0.5">{metadata.status}</span>
+                                )}
+                                <span className="text-zinc-500 text-xs font-medium">{selectedSeries.episodes.length} Episodios</span>
                             </div>
+
+                            {/* Genres */}
+                            {metadata?.genres && metadata.genres.length > 0 && (
+                                <div className="flex flex-wrap gap-1 mb-3">
+                                    {metadata.genres.map(g => (
+                                        <span key={g} className="text-[9px] font-black uppercase tracking-wider px-2 py-0.5 bg-zinc-900 border border-zinc-800 text-zinc-400 rounded-full">{g}</span>
+                                    ))}
+                                </div>
+                            )}
+
+                            {/* Description */}
+                            {metadata?.description && (
+                                <p className="text-zinc-300 text-sm leading-relaxed max-w-3xl line-clamp-3 sm:line-clamp-4 backdrop-blur-sm bg-black/20 p-3 rounded-lg border border-white/5">{metadata.description}</p>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -256,35 +347,11 @@ const Series = () => {
                             ) : (
                                 <div className="flex flex-col gap-3">
                                     {displaySeries.map(item => (
-                                        <div
+                                        <SeriesListItem
                                             key={item.id}
+                                            item={item}
                                             onClick={() => setSelectedSeries(item)}
-                                            className="flex items-center gap-4 p-4 bg-zinc-900/40 hover:bg-zinc-800/80 border border-zinc-800/50 hover:border-primary/50 rounded-xl cursor-pointer transition-all group"
-                                        >
-                                            {item.logo ? (
-                                                <div className="w-16 h-24 sm:w-20 sm:h-28 flex-shrink-0 bg-black rounded-lg overflow-hidden relative">
-                                                    <img src={item.logo} alt={item.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform" onError={(e) => { (e.target as HTMLImageElement).src = 'https://via.placeholder.com/200x300?text=No+Image' }} />
-                                                    <div className="absolute inset-0 bg-black/20 group-hover:bg-transparent transition-colors"></div>
-                                                </div>
-                                            ) : (
-                                                <div className="w-16 h-24 sm:w-20 sm:h-28 flex-shrink-0 bg-zinc-800 rounded-lg flex items-center justify-center">
-                                                    <PlayCircle size={32} className="text-zinc-600" />
-                                                </div>
-                                            )}
-                                            <div className="flex-1 min-w-0">
-                                                <div className="flex items-center gap-2 mb-1">
-                                                    <h3 className="text-lg sm:text-xl font-bold text-white group-hover:text-primary transition-colors truncate">{item.name}</h3>
-                                                    <span className="text-[10px] px-2 py-0.5 bg-zinc-800 text-zinc-500 rounded font-bold uppercase">{item.episodes.length} EP</span>
-                                                </div>
-                                                <p className="text-sm text-zinc-400 capitalize mb-2">{item.group}</p>
-                                                <div className="flex items-center gap-2">
-                                                    <span className="text-[10px] sm:text-xs font-bold px-2 py-1 bg-zinc-800 text-zinc-300 rounded uppercase tracking-wider">Series</span>
-                                                </div>
-                                            </div>
-                                            <div className="hidden sm:flex items-center justify-center w-12 h-12 bg-white/5 group-hover:bg-primary rounded-full transition-colors mr-2">
-                                                <PlayCircle size={24} className="text-zinc-400 group-hover:text-white transition-colors" />
-                                            </div>
-                                        </div>
+                                        />
                                     ))}
                                 </div>
                             )}
